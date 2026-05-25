@@ -1,0 +1,85 @@
+name: Azure AKS Terraform
+description: Run Terraform plan, apply, or destroy for the Azure AKS stack.
+
+inputs:
+  tf_action:
+    description: Terraform action to run
+    required: true
+    default: plan
+  tf_working_dir:
+    description: Path to the AKS Terraform folder
+    required: true
+    default: clouds/azure/aks
+  tf_vars_file:
+    description: Terraform variable file
+    required: true
+    default: aks.auto.tfvars
+  tf_state_key:
+    description: Remote backend state key when backend secrets are configured
+    required: true
+    default: infra/azure/aks/terraform.tfstate
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.9.8
+
+    - name: Terraform Format Check
+      shell: bash
+      working-directory: ${{ inputs.tf_working_dir }}
+      run: terraform fmt -check -recursive
+
+    - name: Terraform Init
+      shell: bash
+      working-directory: ${{ inputs.tf_working_dir }}
+      env:
+        TF_BACKEND_RESOURCE_GROUP: ${{ env.TF_BACKEND_RESOURCE_GROUP }}
+        TF_BACKEND_STORAGE_ACCOUNT: ${{ env.TF_BACKEND_STORAGE_ACCOUNT }}
+        TF_BACKEND_CONTAINER: ${{ env.TF_BACKEND_CONTAINER }}
+      run: |
+        set -eu
+
+        if [[ -n "${TF_BACKEND_RESOURCE_GROUP:-}" && -n "${TF_BACKEND_STORAGE_ACCOUNT:-}" && -n "${TF_BACKEND_CONTAINER:-}" ]]; then
+          terraform init \
+            -input=false \
+            -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
+            -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
+            -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
+            -backend-config="key=${{ inputs.tf_state_key }}"
+        else
+          terraform init -input=false
+        fi
+
+    - name: Terraform Validate
+      shell: bash
+      working-directory: ${{ inputs.tf_working_dir }}
+      run: terraform validate
+
+    - name: Terraform Plan
+      if: ${{ inputs.tf_action == 'plan' || inputs.tf_action == 'apply' }}
+      shell: bash
+      working-directory: ${{ inputs.tf_working_dir }}
+      run: |
+        terraform plan \
+          -input=false \
+          -var-file="${{ inputs.tf_vars_file }}" \
+          -out=tfplan
+
+    - name: Terraform Apply
+      if: ${{ inputs.tf_action == 'apply' }}
+      shell: bash
+      working-directory: ${{ inputs.tf_working_dir }}
+      run: terraform apply -input=false tfplan
+
+    - name: Terraform Destroy
+      if: ${{ inputs.tf_action == 'destroy' }}
+      shell: bash
+      working-directory: ${{ inputs.tf_working_dir }}
+      run: |
+        terraform destroy \
+          -input=false \
+          -auto-approve \
+          -var-file="${{ inputs.tf_vars_file }}"

@@ -1,0 +1,66 @@
+name: Azure AKS Terraform
+
+on:
+  workflow_dispatch:
+    inputs:
+      tf_action:
+        description: Terraform action to run
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      tf_working_dir:
+        description: Path to the AKS Terraform folder
+        required: true
+        default: clouds/azure/aks
+        type: string
+      tf_vars_file:
+        description: Terraform variable file
+        required: true
+        default: aks.auto.tfvars
+        type: string
+      tf_state_key:
+        description: Remote backend state key when backend secrets are configured
+        required: true
+        default: infra/azure/aks/terraform.tfstate
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Azure AKS Terraform
+        uses: ./ci-cd/github_action/aks
+        with:
+          tf_action: ${{ inputs.tf_action }}
+          tf_working_dir: ${{ inputs.tf_working_dir }}
+          tf_vars_file: ${{ inputs.tf_vars_file }}
+          tf_state_key: ${{ inputs.tf_state_key }}
+        env:
+          TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+          TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
+          TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+
+      - name: Upload Plan Artifact
+        if: ${{ inputs.tf_action == 'plan' || inputs.tf_action == 'apply' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: azure-aks-tfplan
+          path: ${{ inputs.tf_working_dir }}/tfplan
