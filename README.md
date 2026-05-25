@@ -62,7 +62,9 @@ Trigger behavior:
 - `plan` runs automatically on push to `main`
 - automatic runs only trigger when AKS files change under `clouds/azure/aks`, `ci-cd/github_action/aks`, or the AKS workflow file
 - `apply` stays manual in the GitHub Actions UI through `Run workflow`
-- `destroy` also stays manual in the GitHub Actions UI
+- `apply` uses Terraform auto-approve when you manually choose `apply`
+- `destroy` stays manual in the GitHub Actions UI
+- `destroy` uses Terraform auto-approve when you manually choose `destroy`
 
 ## Jenkins Usage
 
