@@ -1,6 +1,13 @@
 name: Azure AKS Terraform
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'clouds/azure/aks/**'
+      - 'ci-cd/github_action/aks/**'
+      - '.github/workflows/azure-aks-terraform.yml'
   workflow_dispatch:
     inputs:
       tf_action:
@@ -49,18 +56,18 @@ jobs:
       - name: Run Azure AKS Terraform
         uses: ./ci-cd/github_action/aks
         with:
-          tf_action: ${{ inputs.tf_action }}
-          tf_working_dir: ${{ inputs.tf_working_dir }}
-          tf_vars_file: ${{ inputs.tf_vars_file }}
-          tf_state_key: ${{ inputs.tf_state_key }}
+          tf_action: ${{ github.event_name == 'push' && 'plan' || inputs.tf_action }}
+          tf_working_dir: ${{ github.event_name == 'push' && 'clouds/azure/aks' || inputs.tf_working_dir }}
+          tf_vars_file: ${{ github.event_name == 'push' && 'aks.auto.tfvars' || inputs.tf_vars_file }}
+          tf_state_key: ${{ github.event_name == 'push' && 'infra/azure/aks/terraform.tfstate' || inputs.tf_state_key }}
         env:
           TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
           TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
           TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
 
       - name: Upload Plan Artifact
-        if: ${{ inputs.tf_action == 'plan' || inputs.tf_action == 'apply' }}
+        if: ${{ github.event_name == 'push' || inputs.tf_action == 'plan' || inputs.tf_action == 'apply' }}
         uses: actions/upload-artifact@v4
         with:
           name: azure-aks-tfplan
-          path: ${{ inputs.tf_working_dir }}/tfplan
+          path: ${{ github.event_name == 'push' && 'clouds/azure/aks/tfplan' || format('{0}/tfplan', inputs.tf_working_dir) }}

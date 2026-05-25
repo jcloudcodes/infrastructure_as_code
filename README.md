@@ -21,6 +21,14 @@ CI/CD paths:
 
 ## GitHub Action Usage
 
+GitHub settings location:
+
+1. Open the GitHub repository.
+2. Go to `Settings`.
+3. Go to `Secrets and variables`.
+4. Open `Actions`.
+5. Add values under `Repository secrets` or `Repository variables`.
+
 Create these GitHub repository secrets:
 
 - `AZURE_CLIENT_ID`
@@ -28,11 +36,19 @@ Create these GitHub repository secrets:
 - `AZURE_SUBSCRIPTION_ID`
 - `AZURE_TENANT_ID`
 
+These are the same Azure values used by Jenkins, only stored in GitHub under uppercase secret names.
+
 Optional backend secrets:
 
 - `TF_BACKEND_RESOURCE_GROUP`
 - `TF_BACKEND_STORAGE_ACCOUNT`
 - `TF_BACKEND_CONTAINER`
+
+Optional repository variables:
+
+- `TF_STATE_KEY`
+- `TF_WORKING_DIR`
+- `TF_VARS_FILE`
 
 Workflow inputs:
 
@@ -40,6 +56,13 @@ Workflow inputs:
 - `tf_working_dir`: `clouds/azure/aks`
 - `tf_vars_file`: `aks.auto.tfvars`
 - `tf_state_key`: `infra/azure/aks/terraform.tfstate`
+
+Trigger behavior:
+
+- `plan` runs automatically on push to `main`
+- automatic runs only trigger when AKS files change under `clouds/azure/aks`, `ci-cd/github_action/aks`, or the AKS workflow file
+- `apply` stays manual in the GitHub Actions UI through `Run workflow`
+- `destroy` also stays manual in the GitHub Actions UI
 
 ## Jenkins Usage
 
@@ -49,6 +72,8 @@ Create these Jenkins secret text credentials:
 - `azure-client-secret`
 - `azure-subscription-id`
 - `azure-tenant-id`
+
+These are the same Azure values used in GitHub Actions, only stored in Jenkins under lowercase credential names.
 
 Optional Jenkins backend variables:
 
