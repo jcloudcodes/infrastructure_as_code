@@ -65,6 +65,7 @@ Trigger behavior:
 - `apply` uses Terraform auto-approve when you manually choose `apply`
 - `destroy` stays manual in the GitHub Actions UI
 - `destroy` uses Terraform auto-approve when you manually choose `destroy`
+- the GitHub Actions UI now shows separate jobs for `format`, `init_validate`, `plan`, `apply`, and `destroy`
 
 ## Jenkins Usage
 

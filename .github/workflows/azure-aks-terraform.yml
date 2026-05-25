@@ -48,27 +48,197 @@ env:
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
 jobs:
-  terraform:
+  format:
     runs-on: ubuntu-latest
+    env:
+      TF_WORKING_DIR: ${{ github.event_name == 'push' && 'clouds/azure/aks' || inputs.tf_working_dir }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Run Azure AKS Terraform
-        uses: ./ci-cd/github_action/aks
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
-          tf_action: ${{ github.event_name == 'push' && 'plan' || inputs.tf_action }}
-          tf_working_dir: ${{ github.event_name == 'push' && 'clouds/azure/aks' || inputs.tf_working_dir }}
-          tf_vars_file: ${{ github.event_name == 'push' && 'aks.auto.tfvars' || inputs.tf_vars_file }}
-          tf_state_key: ${{ github.event_name == 'push' && 'infra/azure/aks/terraform.tfstate' || inputs.tf_state_key }}
-        env:
-          TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
-          TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
-          TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+          terraform_version: 1.9.8
+
+      - name: Terraform Format Check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+  init_validate:
+    runs-on: ubuntu-latest
+    needs: format
+    env:
+      TF_WORKING_DIR: ${{ github.event_name == 'push' && 'clouds/azure/aks' || inputs.tf_working_dir }}
+      TF_VARS_FILE: ${{ github.event_name == 'push' && 'aks.auto.tfvars' || inputs.tf_vars_file }}
+      TF_STATE_KEY: ${{ github.event_name == 'push' && 'infra/azure/aks/terraform.tfstate' || inputs.tf_state_key }}
+      TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+      TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
+      TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -eu
+
+          if [[ -n "${TF_BACKEND_RESOURCE_GROUP:-}" && -n "${TF_BACKEND_STORAGE_ACCOUNT:-}" && -n "${TF_BACKEND_CONTAINER:-}" ]]; then
+            terraform init \
+              -input=false \
+              -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
+              -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
+              -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
+              -backend-config="key=${TF_STATE_KEY}"
+          else
+            terraform init -input=false
+          fi
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+  plan:
+    runs-on: ubuntu-latest
+    needs: init_validate
+    if: ${{ github.event_name == 'push' || inputs.tf_action == 'plan' || inputs.tf_action == 'apply' }}
+    env:
+      TF_WORKING_DIR: ${{ github.event_name == 'push' && 'clouds/azure/aks' || inputs.tf_working_dir }}
+      TF_VARS_FILE: ${{ github.event_name == 'push' && 'aks.auto.tfvars' || inputs.tf_vars_file }}
+      TF_STATE_KEY: ${{ github.event_name == 'push' && 'infra/azure/aks/terraform.tfstate' || inputs.tf_state_key }}
+      TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+      TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
+      TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -eu
+
+          if [[ -n "${TF_BACKEND_RESOURCE_GROUP:-}" && -n "${TF_BACKEND_STORAGE_ACCOUNT:-}" && -n "${TF_BACKEND_CONTAINER:-}" ]]; then
+            terraform init \
+              -input=false \
+              -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
+              -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
+              -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
+              -backend-config="key=${TF_STATE_KEY}"
+          else
+            terraform init -input=false
+          fi
+
+      - name: Terraform Plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan \
+            -input=false \
+            -var-file="${TF_VARS_FILE}" \
+            -out=tfplan
 
       - name: Upload Plan Artifact
-        if: ${{ github.event_name == 'push' || inputs.tf_action == 'plan' || inputs.tf_action == 'apply' }}
         uses: actions/upload-artifact@v4
         with:
           name: azure-aks-tfplan
-          path: ${{ github.event_name == 'push' && 'clouds/azure/aks/tfplan' || format('{0}/tfplan', inputs.tf_working_dir) }}
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+
+  apply:
+    runs-on: ubuntu-latest
+    needs: plan
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.tf_action == 'apply' }}
+    env:
+      TF_WORKING_DIR: ${{ inputs.tf_working_dir }}
+      TF_STATE_KEY: ${{ inputs.tf_state_key }}
+      TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+      TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
+      TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: azure-aks-tfplan
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -eu
+
+          if [[ -n "${TF_BACKEND_RESOURCE_GROUP:-}" && -n "${TF_BACKEND_STORAGE_ACCOUNT:-}" && -n "${TF_BACKEND_CONTAINER:-}" ]]; then
+            terraform init \
+              -input=false \
+              -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
+              -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
+              -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
+              -backend-config="key=${TF_STATE_KEY}"
+          else
+            terraform init -input=false
+          fi
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -input=false -auto-approve tfplan
+
+  destroy:
+    runs-on: ubuntu-latest
+    needs: init_validate
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.tf_action == 'destroy' }}
+    env:
+      TF_WORKING_DIR: ${{ inputs.tf_working_dir }}
+      TF_VARS_FILE: ${{ inputs.tf_vars_file }}
+      TF_STATE_KEY: ${{ inputs.tf_state_key }}
+      TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+      TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
+      TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -eu
+
+          if [[ -n "${TF_BACKEND_RESOURCE_GROUP:-}" && -n "${TF_BACKEND_STORAGE_ACCOUNT:-}" && -n "${TF_BACKEND_CONTAINER:-}" ]]; then
+            terraform init \
+              -input=false \
+              -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
+              -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
+              -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
+              -backend-config="key=${TF_STATE_KEY}"
+          else
+            terraform init -input=false
+          fi
+
+      - name: Terraform Destroy
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform destroy \
+            -input=false \
+            -auto-approve \
+            -var-file="${TF_VARS_FILE}"
