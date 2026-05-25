@@ -13,7 +13,11 @@ Terraform path:
 CI/CD paths:
 
 - GitHub Actions workflow:
-  [.github/workflows/azure-aks-terraform.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-terraform.yml)
+  [.github/workflows/azure-aks-plan.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-plan.yml)
+- GitHub Actions apply workflow:
+  [.github/workflows/azure-aks-apply.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-apply.yml)
+- GitHub Actions destroy workflow:
+  [.github/workflows/azure-aks-destroy.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-destroy.yml)
 - GitHub Actions implementation:
   [ci-cd/github_action/aks/action.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/ci-cd/github_action/aks/action.yml)
 - Jenkins pipeline:
@@ -52,20 +56,19 @@ Optional repository variables:
 
 Workflow inputs:
 
-- `tf_action`: `plan`, `apply`, or `destroy`
 - `tf_working_dir`: `clouds/azure/aks`
 - `tf_vars_file`: `aks.auto.tfvars`
 - `tf_state_key`: `infra/azure/aks/terraform.tfstate`
 
 Trigger behavior:
 
-- `plan` runs automatically on push to `main`
-- automatic runs only trigger when AKS files change under `clouds/azure/aks`, `ci-cd/github_action/aks`, or the AKS workflow file
-- `apply` stays manual in the GitHub Actions UI through `Run workflow`
-- `apply` uses Terraform auto-approve when you manually choose `apply`
-- `destroy` stays manual in the GitHub Actions UI
-- `destroy` uses Terraform auto-approve when you manually choose `destroy`
-- the GitHub Actions UI now shows separate jobs for `format`, `init_validate`, `plan`, `apply`, and `destroy`
+- `Azure AKS Plan` runs automatically on push to `main`
+- automatic plan runs only trigger when AKS files change under `clouds/azure/aks`, `ci-cd/github_action/aks`, or the AKS workflow files
+- `Azure AKS Apply` is a separate manual workflow in the GitHub Actions UI
+- `Azure AKS Apply` uses Terraform auto-approve
+- `Azure AKS Destroy` is a separate manual workflow in the GitHub Actions UI
+- `Azure AKS Destroy` uses Terraform auto-approve
+- each workflow shows only its own jobs, so push runs no longer show skipped `apply` or `destroy`
 
 ## Jenkins Usage
 
