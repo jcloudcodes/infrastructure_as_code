@@ -137,6 +137,22 @@ If the service principal already exists and you need a new client secret, reset 
 az ad app credential reset --id <APP_ID>
 ```
 
+Get AKS cluster details after apply:
+
+```bash
+az aks show \
+  --resource-group <RESOURCE_GROUP_NAME> \
+  --name <CLUSTER_NAME> \
+  --query "{name:name,location:location,kubernetesVersion:kubernetesVersion,resourceGroup:resourceGroup,nodeResourceGroup:nodeResourceGroup,provisioningState:provisioningState,fqdn:fqdn}" \
+  --output table
+```
+
+List AKS clusters in the current subscription:
+
+```bash
+az aks list --output table
+```
+
 Note:
 
 - Azure does not let you read an existing client secret value back after creation.

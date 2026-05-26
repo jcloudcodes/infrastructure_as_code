@@ -163,4 +163,25 @@ jobs:
       - name: Terraform Apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform apply -input=false -auto-approve tfplan
+      - name: Show AKS Details
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          set -eu
 
+          az login --service-principal \
+            --username "${ARM_CLIENT_ID}" \
+            --password "${ARM_CLIENT_SECRET}" \
+            --tenant "${ARM_TENANT_ID}" \
+            --output none
+
+          az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+
+          RESOURCE_GROUP_NAME="$(terraform output -raw resource_group_name)"
+          CLUSTER_NAME="$(terraform output -raw cluster_name)"
+
+          echo "AKS cluster created:"
+          az aks show \
+            --resource-group "${RESOURCE_GROUP_NAME}" \
+            --name "${CLUSTER_NAME}" \
+            --query "{name:name,location:location,kubernetesVersion:kubernetesVersion,resourceGroup:resourceGroup,nodeResourceGroup:nodeResourceGroup,provisioningState:provisioningState,fqdn:fqdn}" \
+            --output table
