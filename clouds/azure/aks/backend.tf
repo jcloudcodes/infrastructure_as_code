@@ -8,13 +8,7 @@ terraform {
     }
   }
 
-  # Uncomment and fill these when you are ready to store AKS state in Azure Storage.
-  # backend "azurerm" {
-  #   resource_group_name  = "replace-with-tfstate-rg"
-  #   storage_account_name = "replacewithtfstateacct"
-  #   container_name       = "tfstate"
-  #   key                  = "infra/aks/terraform.tfstate"
-  # }
+  backend "azurerm" {}
 }
 
 provider "azurerm" {
