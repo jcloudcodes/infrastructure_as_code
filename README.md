@@ -97,64 +97,6 @@ Jenkins parameters:
 - `TF_STATE_KEY`: `infra/azure/aks/terraform.tfstate`
 - `AUTO_APPROVE`: `true` or `false`
 
-## Azure CLI Commands
-
-Login first:
-
-```bash
-az login
-```
-
-Get the Azure subscription ID:
-
-```bash
-az account show --query id --output tsv
-```
-
-Get the Azure tenant ID:
-
-```bash
-az account show --query tenantId --output tsv
-```
-
-Create a new service principal and get `client_id`, `client_secret`, `subscription_id`, and `tenant_id` in one command:
-
-```bash
-az ad sp create-for-rbac \
-  --name "sp-azure-aks-terraform" \
-  --role Contributor \
-  --scopes "/subscriptions/$(az account show --query id --output tsv)"
-```
-
-From the output:
-
-- `appId` = `azure-client-id`
-- `password` = `azure-client-secret`
-- `tenant` = `azure-tenant-id`
-- `az account show --query id --output tsv` = `azure-subscription-id`
-
-If the service principal already exists and you need a new client secret, reset it:
-
-```bash
-az ad app credential reset --id <APP_ID>
-```
-
-Get AKS cluster details after apply:
-
-```bash
-az aks show \
-  --resource-group <RESOURCE_GROUP_NAME> \
-  --name <CLUSTER_NAME> \
-  --query "{name:name,location:location,kubernetesVersion:kubernetesVersion,resourceGroup:resourceGroup,nodeResourceGroup:nodeResourceGroup,provisioningState:provisioningState,fqdn:fqdn}" \
-  --output table
-```
-
-List AKS clusters in the current subscription:
-
-```bash
-az aks list --output table
-```
-
 ## Terraform State Backend
 
 Terraform state should be configured in Azure Storage from the start for both GitHub Actions and Jenkins.
@@ -223,3 +165,112 @@ Note:
 
 - Azure does not let you read an existing client secret value back after creation.
 - If you do not have the current secret, create a new one with `az ad app credential reset` or create a new service principal.
+
+## Azure CLI Commands
+
+Login first:
+
+```bash
+az login
+```
+
+Get the Azure subscription ID:
+
+```bash
+az account show --query id --output tsv
+```
+
+Get the Azure tenant ID:
+
+```bash
+az account show --query tenantId --output tsv
+```
+
+Create a new service principal and get `client_id`, `client_secret`, `subscription_id`, and `tenant_id` in one command:
+
+```bash
+az ad sp create-for-rbac \
+  --name "sp-azure-aks-terraform" \
+  --role Contributor \
+  --scopes "/subscriptions/$(az account show --query id --output tsv)"
+```
+
+From the output:
+
+- `appId` = `azure-client-id`
+- `password` = `azure-client-secret`
+- `tenant` = `azure-tenant-id`
+- `az account show --query id --output tsv` = `azure-subscription-id`
+
+If the service principal already exists and you need a new client secret, reset it:
+
+```bash
+az ad app credential reset --id <APP_ID>
+```
+
+Get AKS cluster details after apply:
+
+```bash
+az aks show \
+  --resource-group <RESOURCE_GROUP_NAME> \
+  --name <CLUSTER_NAME> \
+  --query "{name:name,location:location,kubernetesVersion:kubernetesVersion,resourceGroup:resourceGroup,nodeResourceGroup:nodeResourceGroup,provisioningState:provisioningState,fqdn:fqdn}" \
+  --output table
+```
+
+List AKS clusters in the current subscription:
+
+```bash
+az aks list --output table
+```
+
+Pull AKS kubeconfig to your machine:
+
+```bash
+az aks get-credentials \
+  --resource-group rg-ai-demo-aks-dev \
+  --name sap-dev-aksdemo1 \
+  --overwrite-existing
+```
+
+Check the current Kubernetes context:
+
+```bash
+kubectl config current-context
+```
+
+Test cluster access:
+
+```bash
+kubectl get nodes
+```
+
+Confirm the kubeconfig server endpoint:
+
+```bash
+kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'
+echo
+```
+
+If the kubeconfig still points to an old AKS endpoint, clear the old entries:
+
+```bash
+kubectl config delete-context sap-dev-aksdemo1
+kubectl config delete-cluster sap-dev-aksdemo1
+kubectl config unset users.clusterUser_rg-ai-demo-aks-dev_sap-dev-aksdemo1
+```
+
+Then pull the credentials again:
+
+```bash
+az aks get-credentials \
+  --resource-group rg-ai-demo-aks-dev \
+  --name sap-dev-aksdemo1 \
+  --overwrite-existing
+```
+
+The main fix is usually:
+
+```bash
+az aks get-credentials --resource-group rg-ai-demo-aks-dev --name sap-dev-aksdemo1 --overwrite-existing
+```
