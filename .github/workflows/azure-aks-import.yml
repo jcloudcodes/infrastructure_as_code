@@ -1,0 +1,87 @@
+name: Azure AKS Import Existing
+
+on:
+  workflow_dispatch:
+    inputs:
+      tf_working_dir:
+        description: Path to the AKS Terraform folder
+        required: true
+        default: clouds/azure/aks
+        type: string
+      tf_state_key:
+        description: Remote backend state key
+        required: true
+        default: infra/azure/aks/terraform.tfstate
+        type: string
+      resource_group_name:
+        description: Existing AKS resource group name
+        required: true
+        default: rg-ai-demo-aks-dev
+        type: string
+      cluster_name:
+        description: Existing AKS cluster name
+        required: true
+        default: sap-dev-aksdemo1
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+jobs:
+  import_existing:
+    runs-on: ubuntu-latest
+    env:
+      TF_WORKING_DIR: ${{ inputs.tf_working_dir }}
+      TF_STATE_KEY: ${{ inputs.tf_state_key }}
+      TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+      TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
+      TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+      AKS_RESOURCE_GROUP_NAME: ${{ inputs.resource_group_name }}
+      AKS_CLUSTER_NAME: ${{ inputs.cluster_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Require Backend Configuration
+        run: |
+          test -n "${TF_BACKEND_RESOURCE_GROUP}" || { echo "Missing TF_BACKEND_RESOURCE_GROUP secret."; exit 1; }
+          test -n "${TF_BACKEND_STORAGE_ACCOUNT}" || { echo "Missing TF_BACKEND_STORAGE_ACCOUNT secret."; exit 1; }
+          test -n "${TF_BACKEND_CONTAINER}" || { echo "Missing TF_BACKEND_CONTAINER secret."; exit 1; }
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init \
+            -input=false \
+            -reconfigure \
+            -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
+            -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
+            -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
+            -backend-config="key=${TF_STATE_KEY}"
+
+      - name: Import Existing AKS Cluster
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform import \
+            azurerm_kubernetes_cluster.aks_cluster \
+            "/subscriptions/${ARM_SUBSCRIPTION_ID}/resourceGroups/${AKS_RESOURCE_GROUP_NAME}/providers/Microsoft.ContainerService/managedClusters/${AKS_CLUSTER_NAME}"
+
+      - name: Verify Imported State
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform state list
+          terraform state show azurerm_kubernetes_cluster.aks_cluster | sed -n '1,80p'
