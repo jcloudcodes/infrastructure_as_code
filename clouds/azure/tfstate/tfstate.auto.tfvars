@@ -1,0 +1,5 @@
+azure_subscription_id = "b4839350-90c8-44f1-a077-af30199bbd11"
+azure_location        = "eastus"
+resource_group_name   = "rg-ai-demo-tfstate-dev"
+storage_account_name  = "sapdevtfstate001"
+container_name        = "tfstate"

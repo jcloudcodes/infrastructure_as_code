@@ -63,6 +63,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.8
+      - name: Require Backend Configuration
+        run: |
+          test -n "${TF_BACKEND_RESOURCE_GROUP}" || { echo "Missing TF_BACKEND_RESOURCE_GROUP secret. Run Azure TFState Bootstrap first."; exit 1; }
+          test -n "${TF_BACKEND_STORAGE_ACCOUNT}" || { echo "Missing TF_BACKEND_STORAGE_ACCOUNT secret. Run Azure TFState Bootstrap first."; exit 1; }
+          test -n "${TF_BACKEND_CONTAINER}" || { echo "Missing TF_BACKEND_CONTAINER secret. Run Azure TFState Bootstrap first."; exit 1; }
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
@@ -98,6 +103,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.8
+      - name: Require Backend Configuration
+        run: |
+          test -n "${TF_BACKEND_RESOURCE_GROUP}" || { echo "Missing TF_BACKEND_RESOURCE_GROUP secret. Run Azure TFState Bootstrap first."; exit 1; }
+          test -n "${TF_BACKEND_STORAGE_ACCOUNT}" || { echo "Missing TF_BACKEND_STORAGE_ACCOUNT secret. Run Azure TFState Bootstrap first."; exit 1; }
+          test -n "${TF_BACKEND_CONTAINER}" || { echo "Missing TF_BACKEND_CONTAINER secret. Run Azure TFState Bootstrap first."; exit 1; }
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
@@ -141,6 +151,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.8
+      - name: Require Backend Configuration
+        run: |
+          test -n "${TF_BACKEND_RESOURCE_GROUP}" || { echo "Missing TF_BACKEND_RESOURCE_GROUP secret. Run Azure TFState Bootstrap first."; exit 1; }
+          test -n "${TF_BACKEND_STORAGE_ACCOUNT}" || { echo "Missing TF_BACKEND_STORAGE_ACCOUNT secret. Run Azure TFState Bootstrap first."; exit 1; }
+          test -n "${TF_BACKEND_CONTAINER}" || { echo "Missing TF_BACKEND_CONTAINER secret. Run Azure TFState Bootstrap first."; exit 1; }
       - name: Download Plan Artifact
         uses: actions/download-artifact@v4
         with:

@@ -9,6 +9,7 @@ The first Azure AKS environment, including the network used by AKS, was created 
 Terraform path:
 
 - [clouds/azure/aks](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/clouds/azure/aks)
+- [clouds/azure/tfstate](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/clouds/azure/tfstate)
 
 CI/CD paths:
 
@@ -20,6 +21,8 @@ CI/CD paths:
   [.github/workflows/azure-aks-destroy.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-destroy.yml)
 - GitHub Actions implementation:
   [ci-cd/github_action/aks/action.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/ci-cd/github_action/aks/action.yml)
+- GitHub Actions TFState workflow:
+  [.github/workflows/azure-tfstate-bootstrap.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-tfstate-bootstrap.yml)
 - Jenkins pipeline:
   [ci-cd/jenkins/azure-aks.Jenkinsfile](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/ci-cd/jenkins/azure-aks.Jenkinsfile)
 
@@ -42,11 +45,13 @@ Create these GitHub repository secrets:
 
 These are the same Azure values used by Jenkins, only stored in GitHub under uppercase secret names.
 
-Optional backend secrets:
+Required backend secrets for persistent Terraform state:
 
 - `TF_BACKEND_RESOURCE_GROUP`
 - `TF_BACKEND_STORAGE_ACCOUNT`
 - `TF_BACKEND_CONTAINER`
+
+These backend secrets should be configured from the beginning. Without them, GitHub Actions uses temporary local runner state, and a second apply can fail because Terraform no longer remembers previously created Azure resources.
 
 Optional repository variables:
 
@@ -62,6 +67,7 @@ Workflow inputs:
 
 Trigger behavior:
 
+- run `Azure TFState Bootstrap` first
 - `Azure AKS Plan` runs automatically on push to `main`
 - automatic plan runs only trigger when AKS files change under `clouds/azure/aks`, `ci-cd/github_action/aks`, or the AKS workflow files
 - `Azure AKS Apply` is a separate manual workflow in the GitHub Actions UI
@@ -69,6 +75,7 @@ Trigger behavior:
 - `Azure AKS Destroy` is a separate manual workflow in the GitHub Actions UI
 - `Azure AKS Destroy` uses Terraform auto-approve
 - each workflow shows only its own jobs, so push runs no longer show skipped `apply` or `destroy`
+- AKS workflows now fail early if the backend secrets are missing
 
 ## Jenkins Usage
 
@@ -152,6 +159,68 @@ List AKS clusters in the current subscription:
 ```bash
 az aks list --output table
 ```
+
+## Terraform State Backend
+
+Terraform state should be configured in Azure Storage from the start for both GitHub Actions and Jenkins.
+
+Why this is required:
+
+- GitHub-hosted runners are temporary
+- local runner state is lost after the workflow finishes
+- without persistent state, a later apply may try to create the same AKS cluster again
+- that leads to Azure errors saying the resource already exists but is not in Terraform state
+
+Create an Azure resource group for Terraform state:
+
+```bash
+az group create \
+  --name <TFSTATE_RESOURCE_GROUP> \
+  --location eastus
+```
+
+Create an Azure Storage account for Terraform state:
+
+```bash
+az storage account create \
+  --name <TFSTATE_STORAGE_ACCOUNT> \
+  --resource-group <TFSTATE_RESOURCE_GROUP> \
+  --location eastus \
+  --sku Standard_LRS
+```
+
+Create a blob container for Terraform state:
+
+```bash
+az storage container create \
+  --name tfstate \
+  --account-name <TFSTATE_STORAGE_ACCOUNT> \
+  --auth-mode login
+```
+
+Set these GitHub repository secrets:
+
+- `TF_BACKEND_RESOURCE_GROUP` = `<TFSTATE_RESOURCE_GROUP>`
+- `TF_BACKEND_STORAGE_ACCOUNT` = `<TFSTATE_STORAGE_ACCOUNT>`
+- `TF_BACKEND_CONTAINER` = `tfstate`
+
+Recommended state key:
+
+- `TF_STATE_KEY` = `infra/azure/aks/terraform.tfstate`
+
+If the AKS cluster already exists before backend state was configured, import it into Terraform state:
+
+```bash
+terraform import \
+  azurerm_kubernetes_cluster.aks_cluster \
+  "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>/providers/Microsoft.ContainerService/managedClusters/<CLUSTER_NAME>"
+```
+
+IaC bootstrap option:
+
+- use [clouds/azure/tfstate](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/clouds/azure/tfstate)
+- run [.github/workflows/azure-tfstate-bootstrap.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-tfstate-bootstrap.yml)
+- then set the backend outputs as GitHub secrets before running the AKS workflows
 
 Note:
 
