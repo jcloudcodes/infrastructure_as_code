@@ -28,11 +28,6 @@ pipeline {
       defaultValue: 'infra/azure/aks/terraform.tfstate',
       description: 'Remote backend state key when backend config is supplied.'
     )
-    booleanParam(
-      name: 'AUTO_APPROVE',
-      defaultValue: false,
-      description: 'Allow apply or destroy without interactive confirmation.'
-    )
   }
 
   environment {
@@ -51,7 +46,15 @@ pipeline {
       }
     }
 
-    stage('Terraform Init') {
+    stage('Terraform Format') {
+      steps {
+        dir("${params.TF_WORKING_DIR}") {
+          sh 'terraform fmt -check -recursive'
+        }
+      }
+    }
+
+    stage('Terraform Init And Validate') {
       steps {
         dir("${params.TF_WORKING_DIR}") {
           sh '''
@@ -59,27 +62,19 @@ pipeline {
 
             terraform version
 
-            if [ -n "${TF_BACKEND_RESOURCE_GROUP:-}" ] && \
-               [ -n "${TF_BACKEND_STORAGE_ACCOUNT:-}" ] && \
-               [ -n "${TF_BACKEND_CONTAINER:-}" ]; then
-              terraform init \
-                -input=false \
-                -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
-                -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
-                -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
-                -backend-config="key=${TF_STATE_KEY}"
-            else
-              terraform init -input=false
-            fi
-          '''
-        }
-      }
-    }
+            test -n "${TF_BACKEND_RESOURCE_GROUP:-}" || { echo "Missing TF_BACKEND_RESOURCE_GROUP environment variable."; exit 1; }
+            test -n "${TF_BACKEND_STORAGE_ACCOUNT:-}" || { echo "Missing TF_BACKEND_STORAGE_ACCOUNT environment variable."; exit 1; }
+            test -n "${TF_BACKEND_CONTAINER:-}" || { echo "Missing TF_BACKEND_CONTAINER environment variable."; exit 1; }
 
-    stage('Terraform Validate') {
-      steps {
-        dir("${params.TF_WORKING_DIR}") {
-          sh 'terraform validate'
+            terraform init \
+              -input=false \
+              -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
+              -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
+              -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
+              -backend-config="key=${TF_STATE_KEY}"
+
+            terraform validate
+          '''
         }
       }
     }
@@ -106,13 +101,43 @@ pipeline {
         expression { params.TF_ACTION == 'apply' }
       }
       steps {
-        script {
-          if (!params.AUTO_APPROVE) {
-            input message: 'Approve Terraform apply for Azure AKS?', ok: 'Apply'
-          }
-        }
         dir("${params.TF_WORKING_DIR}") {
-          sh 'terraform apply -input=false tfplan'
+          sh '''
+            terraform apply \
+              -input=false \
+              -auto-approve \
+              tfplan
+          '''
+        }
+      }
+    }
+
+    stage('Show AKS Details') {
+      when {
+        expression { params.TF_ACTION == 'apply' }
+      }
+      steps {
+        dir("${params.TF_WORKING_DIR}") {
+          sh '''
+            set -eu
+
+            az login --service-principal \
+              --username "${ARM_CLIENT_ID}" \
+              --password "${ARM_CLIENT_SECRET}" \
+              --tenant "${ARM_TENANT_ID}" \
+              --output none
+
+            az account set --subscription "${ARM_SUBSCRIPTION_ID}"
+
+            RESOURCE_GROUP_NAME="$(terraform output -raw resource_group_name)"
+            CLUSTER_NAME="$(terraform output -raw cluster_name)"
+
+            az aks show \
+              --resource-group "${RESOURCE_GROUP_NAME}" \
+              --name "${CLUSTER_NAME}" \
+              --query "{name:name,location:location,kubernetesVersion:kubernetesVersion,resourceGroup:resourceGroup,nodeResourceGroup:nodeResourceGroup,provisioningState:provisioningState,fqdn:fqdn}" \
+              --output table
+          '''
         }
       }
     }
@@ -122,11 +147,6 @@ pipeline {
         expression { params.TF_ACTION == 'destroy' }
       }
       steps {
-        script {
-          if (!params.AUTO_APPROVE) {
-            input message: 'Approve Terraform destroy for Azure AKS?', ok: 'Destroy'
-          }
-        }
         dir("${params.TF_WORKING_DIR}") {
           sh '''
             terraform destroy \

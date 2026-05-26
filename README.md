@@ -83,7 +83,7 @@ Create these Jenkins secret text credentials:
 
 These are the same Azure values used in GitHub Actions, only stored in Jenkins under lowercase credential names.
 
-Optional Jenkins backend variables:
+Required Jenkins backend variables:
 
 - `TF_BACKEND_RESOURCE_GROUP`
 - `TF_BACKEND_STORAGE_ACCOUNT`
@@ -95,7 +95,16 @@ Jenkins parameters:
 - `TF_WORKING_DIR`: `clouds/azure/aks`
 - `TF_VARS_FILE`: `aks.auto.tfvars`
 - `TF_STATE_KEY`: `infra/azure/aks/terraform.tfstate`
-- `AUTO_APPROVE`: `true` or `false`
+
+Jenkins pipeline behavior:
+
+- runs `terraform fmt -check -recursive`
+- runs `terraform init` with Azure backend config
+- runs `terraform validate`
+- runs `terraform plan` for `plan` and `apply`
+- runs `terraform apply -auto-approve` for `apply`
+- runs `terraform destroy -auto-approve` for `destroy`
+- shows AKS cluster details after `apply`
 
 ## Terraform State Backend
 
