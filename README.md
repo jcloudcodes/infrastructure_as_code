@@ -14,13 +14,7 @@ Terraform path:
 CI/CD paths:
 
 - GitHub Actions workflow:
-  [.github/workflows/azure-aks-plan.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-plan.yml)
-- GitHub Actions apply workflow:
-  [.github/workflows/azure-aks-apply.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-apply.yml)
-- GitHub Actions destroy workflow:
-  [.github/workflows/azure-aks-destroy.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-destroy.yml)
-- GitHub Actions import workflow:
-  [.github/workflows/azure-aks-import.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-import.yml)
+  [.github/workflows/azure-aks-terraform.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/.github/workflows/azure-aks-terraform.yml)
 - GitHub Actions implementation:
   [ci-cd/github_action/aks/action.yml](/Users/makutaworldmpm/Desktop/eagunu_2025/jcloudcodes/iac/infrastructure_as_code/ci-cd/github_action/aks/action.yml)
 - GitHub Actions TFState workflow:
@@ -63,6 +57,7 @@ Optional repository variables:
 
 Workflow inputs:
 
+- `tf_action`: `apply` or `destroy` for manual runs
 - `tf_working_dir`: `clouds/azure/aks`
 - `tf_vars_file`: `aks.auto.tfvars`
 - `tf_state_key`: `infra/azure/aks/terraform.tfstate`
@@ -70,14 +65,11 @@ Workflow inputs:
 Trigger behavior:
 
 - run `Azure TFState Bootstrap` first
-- `Azure AKS Plan` runs automatically on push to `main`
-- automatic plan runs only trigger when AKS files change under `clouds/azure/aks`, `ci-cd/github_action/aks`, or the AKS workflow files
-- `Azure AKS Apply` is a separate manual workflow in the GitHub Actions UI
-- `Azure AKS Apply` uses Terraform auto-approve
-- `Azure AKS Destroy` is a separate manual workflow in the GitHub Actions UI
-- `Azure AKS Destroy` uses Terraform auto-approve
-- `Azure AKS Import Existing` is a separate manual workflow for adopting an already-created AKS cluster into Terraform state
-- each workflow shows only its own jobs, so push runs no longer show skipped `apply` or `destroy`
+- `Azure AKS Terraform` is a single pipeline
+- on push it runs `format`, `init_validate`, and `plan`
+- manual runs use `tf_action=apply` or `tf_action=destroy`
+- `apply` uses Terraform auto-approve
+- `destroy` uses Terraform auto-approve
 - AKS workflows now fail early if the backend secrets are missing
 
 ## Jenkins Usage
@@ -219,15 +211,7 @@ terraform import \
   "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<RESOURCE_GROUP_NAME>/providers/Microsoft.ContainerService/managedClusters/<CLUSTER_NAME>"
 ```
 
-GitHub Actions import option:
-
-- run `Azure AKS Import Existing`
-- set:
-  - `tf_working_dir=clouds/azure/aks`
-  - `tf_state_key=infra/azure/aks/terraform.tfstate`
-  - `resource_group_name=<RESOURCE_GROUP_NAME>`
-  - `cluster_name=<CLUSTER_NAME>`
-- after import succeeds, run `Azure AKS Plan` and then `Azure AKS Apply`
+If the AKS cluster already exists before backend state was configured, import it once from the AKS Terraform folder, then continue with the single GitHub Actions pipeline.
 
 IaC bootstrap option:
 
