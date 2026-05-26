@@ -139,7 +139,7 @@ jobs:
             -var-file="${TF_VARS_FILE}" \
             -out=tfplan
       - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: azure-aks-tfplan
           path: ${{ env.TF_WORKING_DIR }}/tfplan
