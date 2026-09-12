@@ -1,23 +1,35 @@
-name: Azure AKS Terraform
-description: Run Terraform plan, apply, or destroy for the Azure AKS stack.
+name: Azure AKS Terraform Setup
+description: Set up Terraform and initialize the Azure AKS working directory.
 
 inputs:
-  tf_action:
-    description: Terraform action to run
-    required: true
-    default: plan
   tf_working_dir:
     description: Path to the AKS Terraform folder
     required: true
     default: clouds/azure/aks
-  tf_vars_file:
-    description: Terraform variable file
-    required: true
-    default: aks.auto.tfvars
   tf_state_key:
     description: Remote backend state key when backend secrets are configured
-    required: true
+    required: false
     default: infra/azure/aks/terraform.tfstate
+  terraform_version:
+    description: Terraform version to install
+    required: false
+    default: 1.9.8
+  backend:
+    description: Set to "false" to init without any backend (for fmt/validate only)
+    required: false
+    default: 'true'
+  backend_resource_group:
+    description: Resource group holding the Terraform state storage account
+    required: false
+    default: ''
+  backend_storage_account:
+    description: Storage account holding the Terraform state
+    required: false
+    default: ''
+  backend_container:
+    description: Blob container holding the Terraform state
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -25,61 +37,33 @@ runs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
-        terraform_version: 1.9.8
-
-    - name: Terraform Format Check
-      shell: bash
-      working-directory: ${{ inputs.tf_working_dir }}
-      run: terraform fmt -check -recursive
+        terraform_version: ${{ inputs.terraform_version }}
+        terraform_wrapper: false
 
     - name: Terraform Init
       shell: bash
       working-directory: ${{ inputs.tf_working_dir }}
       env:
-        TF_BACKEND_RESOURCE_GROUP: ${{ env.TF_BACKEND_RESOURCE_GROUP }}
-        TF_BACKEND_STORAGE_ACCOUNT: ${{ env.TF_BACKEND_STORAGE_ACCOUNT }}
-        TF_BACKEND_CONTAINER: ${{ env.TF_BACKEND_CONTAINER }}
+        TF_BACKEND: ${{ inputs.backend }}
+        TF_BACKEND_RESOURCE_GROUP: ${{ inputs.backend_resource_group }}
+        TF_BACKEND_STORAGE_ACCOUNT: ${{ inputs.backend_storage_account }}
+        TF_BACKEND_CONTAINER: ${{ inputs.backend_container }}
+        TF_STATE_KEY: ${{ inputs.tf_state_key }}
       run: |
         set -eu
 
-        if [[ -n "${TF_BACKEND_RESOURCE_GROUP:-}" && -n "${TF_BACKEND_STORAGE_ACCOUNT:-}" && -n "${TF_BACKEND_CONTAINER:-}" ]]; then
+        if [[ "${TF_BACKEND}" != "true" ]]; then
+          echo "Initializing without a backend (validation only)."
+          terraform init -input=false -backend=false
+        elif [[ -n "${TF_BACKEND_RESOURCE_GROUP}" && -n "${TF_BACKEND_STORAGE_ACCOUNT}" && -n "${TF_BACKEND_CONTAINER}" ]]; then
+          echo "Initializing with the azurerm backend."
           terraform init \
             -input=false \
             -backend-config="resource_group_name=${TF_BACKEND_RESOURCE_GROUP}" \
             -backend-config="storage_account_name=${TF_BACKEND_STORAGE_ACCOUNT}" \
             -backend-config="container_name=${TF_BACKEND_CONTAINER}" \
-            -backend-config="key=${{ inputs.tf_state_key }}"
+            -backend-config="key=${TF_STATE_KEY}"
         else
+          echo "Backend secrets are not set; initializing with local state."
           terraform init -input=false
         fi
-
-    - name: Terraform Validate
-      shell: bash
-      working-directory: ${{ inputs.tf_working_dir }}
-      run: terraform validate
-
-    - name: Terraform Plan
-      if: ${{ inputs.tf_action == 'plan' || inputs.tf_action == 'apply' }}
-      shell: bash
-      working-directory: ${{ inputs.tf_working_dir }}
-      run: |
-        terraform plan \
-          -input=false \
-          -var-file="${{ inputs.tf_vars_file }}" \
-          -out=tfplan
-
-    - name: Terraform Apply
-      if: ${{ inputs.tf_action == 'apply' }}
-      shell: bash
-      working-directory: ${{ inputs.tf_working_dir }}
-      run: terraform apply -input=false -auto-approve tfplan
-
-    - name: Terraform Destroy
-      if: ${{ inputs.tf_action == 'destroy' }}
-      shell: bash
-      working-directory: ${{ inputs.tf_working_dir }}
-      run: |
-        terraform destroy \
-          -input=false \
-          -auto-approve \
-          -var-file="${{ inputs.tf_vars_file }}"
