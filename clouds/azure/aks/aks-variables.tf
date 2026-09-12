@@ -157,3 +157,51 @@ variable "acr_id" {
   type        = string
   default     = null
 }
+
+variable "vnet_name" {
+  description = "Name of the AKS virtual network"
+  type        = string
+  default     = "jcloudcodes-aks-vnet"
+}
+
+variable "vnet_cidr" {
+  description = "Address space for the AKS virtual network"
+  type        = string
+  default     = "10.30.0.0/16"
+}
+
+variable "aks_subnet_name" {
+  description = "Name of the AKS node subnet"
+  type        = string
+  default     = "aks-subnet"
+}
+
+variable "aks_subnet_cidr" {
+  description = "CIDR for the AKS node subnet"
+  type        = string
+  default     = "10.30.1.0/24"
+}
+
+variable "ingress_subnet_name" {
+  description = "Name of the dedicated ingress subnet"
+  type        = string
+  default     = "ingress-subnet"
+}
+
+variable "ingress_subnet_cidr" {
+  description = "CIDR for the dedicated ingress subnet"
+  type        = string
+  default     = "10.30.2.0/24"
+}
+
+variable "ingress_nsg_name" {
+  description = "Name of the NSG attached to the ingress subnet"
+  type        = string
+  default     = "jcloudcodes-aks-ingress-nsg"
+}
+
+variable "devtools_vnet_cidr" {
+  description = "CIDR allowed to reach the AKS ingress subnet on HTTP/HTTPS"
+  type        = string
+  default     = "10.23.0.0/16"
+}
