@@ -1,0 +1,63 @@
+# Smoke test for the internal load balancer path on jcloudcodes-dev-aks.
+# Proves three things at once: nodes schedule pods, the cluster identity can read
+# ingress-subnet, and Azure will place an internal LB there with a static IP.
+#
+#   kubectl apply -f nginx-test.yaml
+#   kubectl -n nginx-test get svc -w      # wait for EXTERNAL-IP 10.30.2.11
+#   kubectl delete -f nginx-test.yaml     # when done
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nginx-test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-test
+  namespace: nginx-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-test
+  template:
+    metadata:
+      labels:
+        app: nginx-test
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-test-lb
+  namespace: nginx-test
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: "ingress-subnet"
+    # .10 is reserved for ingress-nginx; this test takes .11
+    service.beta.kubernetes.io/azure-load-balancer-ipv4: "10.30.2.11"
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-test
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

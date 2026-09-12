@@ -1,0 +1,45 @@
+# ingress-nginx with a PUBLIC Azure load balancer.
+#   helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx `
+#     -n ingress-nginx --create-namespace -f ingress-nginx-values.yaml
+#
+# To flip this to the internal LB on 10.30.2.10 later, uncomment the three
+# annotations under the "internal" comment and delete/recreate the service.
+
+controller:
+  replicaCount: 1
+
+  service:
+    type: LoadBalancer
+    # externalTrafficPolicy: Local preserves the real client IP. It also means
+    # only nodes actually running a controller pod pass the LB health probe,
+    # which is why the probe path below must be set.
+    externalTrafficPolicy: Local
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+      # --- internal (currently off) ---
+      # service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      # service.beta.kubernetes.io/azure-load-balancer-internal-subnet: ingress-subnet
+      # service.beta.kubernetes.io/azure-load-balancer-ipv4: 10.30.2.10
+
+  # ArgoCD's UI streams and uses gRPC-web; the defaults are too tight.
+  config:
+    proxy-body-size: "0"
+    proxy-read-timeout: "3600"
+    proxy-send-timeout: "3600"
+    use-forwarded-headers: "true"
+
+  nodeSelector:
+    kubernetes.io/os: linux
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+  admissionWebhooks:
+    patch:
+      nodeSelector:
+        kubernetes.io/os: linux
+
+defaultBackend:
+  enabled: false

@@ -1,0 +1,42 @@
+# ArgoCD behind ingress-nginx.
+#   helm upgrade --install argocd argo/argo-cd -n argocd --create-namespace -f argocd-values.yaml
+#
+# The chart's own ingress block has changed shape across chart majors
+# (hosts vs hostname), so it stays disabled here and the Ingress is applied
+# from argocd-ingress.yaml instead. That keeps this working on any chart version.
+
+configs:
+  params:
+    # argocd-server serves HTTPS by default. Behind an ingress that also does
+    # TLS you get an infinite redirect loop, so terminate TLS at nginx and let
+    # argocd-server speak plain HTTP inside the cluster.
+    server.insecure: true
+
+server:
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Two-node dev cluster: keep the footprint small.
+controller:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+repoServer:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+dex:
+  enabled: false
+
+applicationSet:
+  enabled: true
