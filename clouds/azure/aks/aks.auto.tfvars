@@ -1,30 +1,33 @@
-azure_subscription_id = "b4839350-90c8-44f1-a077-af30199bbd11"
-azure_tenant_id       = "38a4679a-7d5a-41d7-a4a6-45f661699acb"
-azure_location        = "eastus"
-resource_group_name   = "rg-ai-demo-aks-dev"
+azure_subscription_id = "f18faa82-efd2-439c-ae36-7f0ccd369e12"
+azure_tenant_id       = "e12bc39a-61a0-40ad-baef-91b20ca4e856"
+azure_location        = "centralus"
+resource_group_name   = "jcloudcodes-aks-dev-rg"
 
-cluster_name            = "aksdemo1"
+# Keep the AKS cluster name exactly as written below.
+cluster_name            = "jcloudcodes-dev-aks"
 cluster_version         = null
 private_cluster_enabled = false
 private_dns_zone_id     = null
 sku_tier                = "Free"
 
-vnet_subnet_id = "/subscriptions/b4839350-90c8-44f1-a077-af30199bbd11/resourceGroups/rg-ai-demo-aks-dev/providers/Microsoft.Network/virtualNetworks/vnet-ai-demo-aks-dev/subnets/snet-aks"
+# Existing BYO VNet/subnet used by the AKS node pool.
+vnet_id = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet"
+vnet_subnet_id = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet/subnets/aks-subnet"
 
 service_cidr   = "172.20.0.0/16"
 dns_service_ip = "172.20.0.10"
 
 node_pool_name                        = "system"
 node_pool_temporary_name_for_rotation = "systemtmp"
-node_pool_vm_size                     = "Standard_DC2as_v5"
-node_pool_os_disk_size_gb             = 128
+node_pool_vm_size                     = "Standard_D2s_v7"
+node_pool_os_disk_size_gb             = 64
 node_pool_os_disk_type                = "Managed"
 node_pool_enable_auto_scaling         = true
-node_pool_desired_size                = 2
-node_pool_min_size                    = 2
-node_pool_max_size                    = 4
+node_pool_desired_size                = 1
+node_pool_min_size                    = 1
+node_pool_max_size                    = 2
 node_pool_max_pods                    = 30
-node_pool_zones                       = ["1", "3"]
+node_pool_zones                       = []
 
 network_plugin    = "azure"
 network_policy    = "azure"

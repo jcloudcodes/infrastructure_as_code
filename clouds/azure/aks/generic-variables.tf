@@ -12,7 +12,7 @@ variable "azure_tenant_id" {
 variable "azure_location" {
   description = "Azure region where AKS resources will be created"
   type        = string
-  default     = "eastus"
+  default     = "centralus"
 }
 
 variable "resource_group_name" {

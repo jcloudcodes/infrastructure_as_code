@@ -11,10 +11,8 @@ locals {
 
   name = local.safe_prefix
 
-  cluster_name_suffix_raw = replace(replace(replace(replace(lower(var.cluster_name), " ", "-"), "_", "-"), ".", "-"), "/", "-")
-  cluster_name_suffix     = trim(local.cluster_name_suffix_raw, "-")
-  aks_cluster_name_raw    = "${local.name}-${local.cluster_name_suffix}"
-  aks_cluster_name        = substr(trim(local.aks_cluster_name_raw, "-"), 0, 63)
+  # Use the configured AKS cluster name exactly (for example, jcloudcodes-dev-aks).
+  aks_cluster_name = var.cluster_name
 
   dns_prefix = var.dns_prefix == null ? local.aks_cluster_name : (
     trimspace(var.dns_prefix) == "" ? local.aks_cluster_name : var.dns_prefix

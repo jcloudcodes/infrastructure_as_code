@@ -54,6 +54,15 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
   tags = local.common_tags
 }
 
+
+# The AKS control-plane managed identity needs network permissions on the BYO VNet.
+# This is required for operations such as provisioning internal Azure Load Balancers.
+resource "azurerm_role_assignment" "aks_network_contributor" {
+  scope                = var.vnet_id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_kubernetes_cluster.aks_cluster.identity[0].principal_id
+}
+
 resource "azurerm_role_assignment" "aks_acr_pull" {
   count = var.acr_id == null ? 0 : (
     trimspace(var.acr_id) == "" ? 0 : 1
