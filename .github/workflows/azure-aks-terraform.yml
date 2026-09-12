@@ -6,16 +6,43 @@ on:
       - main
     paths:
       - 'clouds/azure/aks/**'
+      - 'ci-cd/github_action/aks/**'
       - '.github/workflows/azure-aks-terraform.yml'
 
   workflow_dispatch:
     inputs:
       tf_action:
-        description: 'Terraform action'
+        description: Terraform action
         required: true
-        default: 'plan'
+        default: plan
         type: choice
         options:
           - plan
           - apply
           - destroy
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      TF_BACKEND_RESOURCE_GROUP: ${{ secrets.TF_BACKEND_RESOURCE_GROUP }}
+      TF_BACKEND_STORAGE_ACCOUNT: ${{ secrets.TF_BACKEND_STORAGE_ACCOUNT }}
+      TF_BACKEND_CONTAINER: ${{ secrets.TF_BACKEND_CONTAINER }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run AKS Terraform
+        uses: ./ci-cd/github_action/aks
+        with:
+          tf_action: ${{ github.event_name == 'workflow_dispatch' && inputs.tf_action || 'plan' }}
+          tf_working_dir: clouds/azure/aks
+          tf_vars_file: aks.auto.tfvars
+          tf_state_key: jcloudcodes/aks/centralus/terraform.tfstate
