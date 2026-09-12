@@ -1,7 +1,7 @@
 resource "azurerm_kubernetes_cluster" "aks_cluster" {
   name                    = local.aks_cluster_name
-  location                = var.azure_location
-  resource_group_name     = var.resource_group_name
+  location                = azurerm_resource_group.aks_rg.location
+  resource_group_name     = azurerm_resource_group.aks_rg.name
   dns_prefix              = local.dns_prefix
   kubernetes_version      = var.cluster_version
   sku_tier                = var.sku_tier
@@ -12,7 +12,7 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     temporary_name_for_rotation = var.node_pool_temporary_name_for_rotation
     name                        = var.node_pool_name
     vm_size                     = var.node_pool_vm_size
-    vnet_subnet_id              = var.vnet_subnet_id
+    vnet_subnet_id              = azurerm_subnet.aks_subnet.id
     type                        = var.node_pool_type
     os_disk_size_gb             = var.node_pool_os_disk_size_gb
     os_disk_type                = var.node_pool_os_disk_type
@@ -65,7 +65,7 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
 # The AKS control-plane managed identity needs network permissions on the BYO VNet.
 # This is required for operations such as provisioning internal Azure Load Balancers.
 resource "azurerm_role_assignment" "aks_network_contributor" {
-  scope                = var.vnet_id
+  scope                = azurerm_virtual_network.aks_vnet.id
   role_definition_name = "Network Contributor"
   principal_id         = azurerm_kubernetes_cluster.aks_cluster.identity[0].principal_id
 }

@@ -34,16 +34,6 @@ variable "dns_prefix" {
   default     = null
 }
 
-variable "vnet_id" {
-  description = "Resource ID of the VNet used by AKS. The AKS managed identity receives Network Contributor on this scope."
-  type        = string
-}
-
-variable "vnet_subnet_id" {
-  description = "Subnet ID where the AKS node pool will run"
-  type        = string
-}
-
 variable "service_cidr" {
   description = "CIDR block for Kubernetes services"
   type        = string
@@ -158,20 +148,8 @@ variable "acr_id" {
   default     = null
 }
 
-variable "ingress_subnet_id" {
-  description = <<-EOT
-    Subnet ID used by internal Azure load balancers created from Kubernetes
-    Services (the service.beta.kubernetes.io/azure-load-balancer-internal-subnet
-    annotation). Must live inside vnet_id so the cluster identity's VNet-scoped
-    Network Contributor grant covers it. Set to null if internal LBs share the
-    node subnet.
-  EOT
-  type        = string
-  default     = null
-}
-
 variable "ingress_loadbalancer_ip" {
-  description = "Static private IP for the internal ingress load balancer. Must fall inside ingress_subnet_id's range."
+  description = "Static private IP for the internal ingress load balancer. Must fall inside ingress_subnet_cidr."
   type        = string
   default     = null
 }

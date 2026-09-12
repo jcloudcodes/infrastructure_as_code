@@ -20,7 +20,17 @@ output "cluster_version" {
 
 output "resource_group_name" {
   description = "The Azure resource group name used by AKS"
-  value       = var.resource_group_name
+  value       = azurerm_resource_group.aks_rg.name
+}
+
+output "vnet_id" {
+  description = "Resource ID of the virtual network created for this stack"
+  value       = azurerm_virtual_network.aks_vnet.id
+}
+
+output "aks_subnet_id" {
+  description = "Resource ID of the AKS node subnet"
+  value       = azurerm_subnet.aks_subnet.id
 }
 
 output "node_resource_group" {
@@ -45,14 +55,19 @@ output "oidc_issuer_url" {
 
 output "ingress_subnet_id" {
   description = "Subnet the internal ingress load balancer should use"
-  value       = var.ingress_subnet_id
+  value       = azurerm_subnet.ingress_subnet.id
+}
+
+output "ingress_nsg_id" {
+  description = "Resource ID of the NSG attached to the ingress subnet"
+  value       = azurerm_network_security_group.ingress_nsg.id
 }
 
 output "ingress_annotations_hint" {
   description = "Service annotations that match this stack's networking"
-  value = var.ingress_subnet_id == null ? {} : {
+  value = {
     "service.beta.kubernetes.io/azure-load-balancer-internal"        = "true"
-    "service.beta.kubernetes.io/azure-load-balancer-internal-subnet" = reverse(split("/", var.ingress_subnet_id))[0]
+    "service.beta.kubernetes.io/azure-load-balancer-internal-subnet" = azurerm_subnet.ingress_subnet.name
     "service.beta.kubernetes.io/azure-load-balancer-ipv4"            = var.ingress_loadbalancer_ip
   }
 }

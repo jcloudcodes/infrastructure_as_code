@@ -10,18 +10,28 @@ private_cluster_enabled = false
 private_dns_zone_id     = null
 sku_tier                = "Free"
 
-# Existing BYO VNet/subnet used by the AKS node pool.
-vnet_id        = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet"
-vnet_subnet_id = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet/subnets/aks-subnet"
+# --- Network (created and owned by this stack) -------------------------------
+vnet_name = "jcloudcodes-aks-vnet"
+vnet_cidr = "10.30.0.0/16"
 
-# Subnet the internal ingress load balancer lands in. Terraform did not know this
-# subnet existed before; the VNet-scoped role assignment is what authorizes it.
-ingress_subnet_id       = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet/subnets/ingress-subnet"
+aks_subnet_name = "aks-subnet"
+aks_subnet_cidr = "10.30.1.0/24"
+
+ingress_subnet_name = "ingress-subnet"
+ingress_subnet_cidr = "10.30.2.0/24"
+
+ingress_nsg_name        = "ingress-nsg"
 ingress_loadbalancer_ip = "10.30.2.10"
 
+# Source range allowed to reach the ingress LB on 80/443.
+# Leave null to create the NSG with no allow rules (intra-VNet traffic still works).
+devtools_vnet_cidr = null
+
+# --- Kubernetes networking ---------------------------------------------------
 service_cidr   = "172.20.0.0/16"
 dns_service_ip = "172.20.0.10"
 
+# --- Node pool ---------------------------------------------------------------
 node_pool_name                        = "system"
 node_pool_temporary_name_for_rotation = "systemtmp"
 node_pool_vm_size                     = "Standard_D2s_v7"
