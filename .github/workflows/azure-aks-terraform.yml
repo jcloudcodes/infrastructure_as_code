@@ -1,0 +1,21 @@
+name: Azure AKS Terraform
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'clouds/azure/aks/**'
+      - '.github/workflows/azure-aks-terraform.yml'
+
+  workflow_dispatch:
+    inputs:
+      tf_action:
+        description: 'Terraform action'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
