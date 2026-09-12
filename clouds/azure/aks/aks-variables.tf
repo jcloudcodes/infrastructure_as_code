@@ -34,16 +34,6 @@ variable "dns_prefix" {
   default     = null
 }
 
-variable "vnet_id" {
-  description = "Resource ID of the VNet used by AKS. The AKS managed identity receives Network Contributor on this scope."
-  type        = string
-}
-
-variable "vnet_subnet_id" {
-  description = "Subnet ID where the AKS node pool will run"
-  type        = string
-}
-
 variable "service_cidr" {
   description = "CIDR block for Kubernetes services"
   type        = string
