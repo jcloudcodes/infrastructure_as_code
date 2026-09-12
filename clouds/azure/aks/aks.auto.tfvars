@@ -11,7 +11,7 @@ private_dns_zone_id     = null
 sku_tier                = "Free"
 
 # Existing BYO VNet/subnet used by the AKS node pool.
-vnet_id = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet"
+vnet_id        = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet"
 vnet_subnet_id = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet/subnets/aks-subnet"
 
 service_cidr   = "172.20.0.0/16"
