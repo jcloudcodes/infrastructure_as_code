@@ -283,7 +283,7 @@ The main fix is usually:
 ```bash
 az aks get-credentials --resource-group rg-ai-demo-aks-dev --name sap-dev-aksdemo1 --overwrite-existing
 ```
-#################################################### claude update
+# claude update
 
 For your Azure VMs, if you want to stop/deallocate all VMs in jcloudcodes-devtools-rg so they stop consuming compute charges, use:
 
