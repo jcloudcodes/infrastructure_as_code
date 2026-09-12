@@ -42,3 +42,17 @@ output "oidc_issuer_url" {
   description = "OIDC issuer URL for AKS workload identity"
   value       = azurerm_kubernetes_cluster.aks_cluster.oidc_issuer_url
 }
+
+output "ingress_subnet_id" {
+  description = "Subnet the internal ingress load balancer should use"
+  value       = var.ingress_subnet_id
+}
+
+output "ingress_annotations_hint" {
+  description = "Service annotations that match this stack's networking"
+  value = var.ingress_subnet_id == null ? {} : {
+    "service.beta.kubernetes.io/azure-load-balancer-internal"        = "true"
+    "service.beta.kubernetes.io/azure-load-balancer-internal-subnet" = reverse(split("/", var.ingress_subnet_id))[0]
+    "service.beta.kubernetes.io/azure-load-balancer-ipv4"            = var.ingress_loadbalancer_ip
+  }
+}

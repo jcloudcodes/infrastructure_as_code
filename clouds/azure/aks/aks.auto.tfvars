@@ -3,24 +3,21 @@ azure_tenant_id       = "e12bc39a-61a0-40ad-baef-91b20ca4e856"
 azure_location        = "centralus"
 resource_group_name   = "jcloudcodes-aks-dev-rg"
 
+# Keep the AKS cluster name exactly as written below.
 cluster_name            = "jcloudcodes-dev-aks"
 cluster_version         = null
 private_cluster_enabled = false
 private_dns_zone_id     = null
 sku_tier                = "Free"
 
-vnet_name = "jcloudcodes-aks-vnet"
-vnet_cidr = "10.30.0.0/16"
+# Existing BYO VNet/subnet used by the AKS node pool.
+vnet_id        = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet"
+vnet_subnet_id = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet/subnets/aks-subnet"
 
-aks_subnet_name = "aks-subnet"
-aks_subnet_cidr = "10.30.1.0/24"
-
-ingress_subnet_name = "ingress-subnet"
-ingress_subnet_cidr = "10.30.2.0/24"
-
-ingress_nsg_name = "jcloudcodes-aks-ingress-nsg"
-
-devtools_vnet_cidr = "10.23.0.0/16"
+# Subnet the internal ingress load balancer lands in. Terraform did not know this
+# subnet existed before; the VNet-scoped role assignment is what authorizes it.
+ingress_subnet_id       = "/subscriptions/f18faa82-efd2-439c-ae36-7f0ccd369e12/resourceGroups/jcloudcodes-aks-dev-rg/providers/Microsoft.Network/virtualNetworks/jcloudcodes-aks-vnet/subnets/ingress-subnet"
+ingress_loadbalancer_ip = "10.30.2.10"
 
 service_cidr   = "172.20.0.0/16"
 dns_service_ip = "172.20.0.10"

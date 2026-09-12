@@ -34,6 +34,16 @@ variable "dns_prefix" {
   default     = null
 }
 
+variable "vnet_id" {
+  description = "Resource ID of the VNet used by AKS. The AKS managed identity receives Network Contributor on this scope."
+  type        = string
+}
+
+variable "vnet_subnet_id" {
+  description = "Subnet ID where the AKS node pool will run"
+  type        = string
+}
+
 variable "service_cidr" {
   description = "CIDR block for Kubernetes services"
   type        = string
@@ -148,50 +158,20 @@ variable "acr_id" {
   default     = null
 }
 
-variable "vnet_name" {
-  description = "Name of the AKS virtual network"
+variable "ingress_subnet_id" {
+  description = <<-EOT
+    Subnet ID used by internal Azure load balancers created from Kubernetes
+    Services (the service.beta.kubernetes.io/azure-load-balancer-internal-subnet
+    annotation). Must live inside vnet_id so the cluster identity's VNet-scoped
+    Network Contributor grant covers it. Set to null if internal LBs share the
+    node subnet.
+  EOT
   type        = string
-  default     = "jcloudcodes-aks-vnet"
+  default     = null
 }
 
-variable "vnet_cidr" {
-  description = "Address space for the AKS virtual network"
+variable "ingress_loadbalancer_ip" {
+  description = "Static private IP for the internal ingress load balancer. Must fall inside ingress_subnet_id's range."
   type        = string
-  default     = "10.30.0.0/16"
-}
-
-variable "aks_subnet_name" {
-  description = "Name of the AKS node subnet"
-  type        = string
-  default     = "aks-subnet"
-}
-
-variable "aks_subnet_cidr" {
-  description = "CIDR for the AKS node subnet"
-  type        = string
-  default     = "10.30.1.0/24"
-}
-
-variable "ingress_subnet_name" {
-  description = "Name of the dedicated ingress subnet"
-  type        = string
-  default     = "ingress-subnet"
-}
-
-variable "ingress_subnet_cidr" {
-  description = "CIDR for the dedicated ingress subnet"
-  type        = string
-  default     = "10.30.2.0/24"
-}
-
-variable "ingress_nsg_name" {
-  description = "Name of the NSG attached to the ingress subnet"
-  type        = string
-  default     = "jcloudcodes-aks-ingress-nsg"
-}
-
-variable "devtools_vnet_cidr" {
-  description = "CIDR allowed to reach the AKS ingress subnet on HTTP/HTTPS"
-  type        = string
-  default     = "10.23.0.0/16"
+  default     = null
 }
